@@ -9,9 +9,9 @@ void Enemy::setup() {}
 
 void Enemy::update() {
   if (is_left) {
-    x += 10.0;
+    x += 10.0 * Scene::DeltaTime() * 60.0;
   } else {
-    x -= 10.0;
+    x -= 10.0 * Scene::DeltaTime() * 60.0;
   }
   hit_collision = Circle(x, y, TextureAsset(U"enemy").size().x / 2);
 }

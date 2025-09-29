@@ -10,8 +10,8 @@ void Player::setup() {
 }
 
 void Player::update() {
-  vy += 0.3;
-  y += vy;
+  vy += 0.3 * Scene::DeltaTime() * 60.0;
+  y += vy * Scene::DeltaTime() * 60.0;
 
   if (KeyUp.down()) {
     vy = -10.0;
