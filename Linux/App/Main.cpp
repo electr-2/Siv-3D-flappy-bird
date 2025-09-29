@@ -1,101 +1,62 @@
 #include <Siv3D.hpp>
+#include <iostream>
+#include <vector>
 
+#include "Enemy.hpp"
 #include "Player.hpp"
 
+std::vector<Enemy> enemys = {};
+Player player = Player();
+Stopwatch stopwatch(StartImmediately::No);  // trueで自動スタート
+
+void dispatch_enemy() {
+  bool is_left = RandomBool();
+  int random_y = Random(0, Scene::Height());
+
+  enemys.emplace_back(random_y, is_left);
+
+  enemys.back().setup();
+}
+
+void reset_game() {
+  enemys.clear();
+  player.setup();
+  stopwatch.restart();
+}
+
 void Main() {
-  Scene::SetBackground(ColorF{0.6, 0.8, 0.7});
+  Window::Resize(1280, 720);
+  Scene::SetBackground(Palette::Skyblue);
 
-  // 画像ファイルからテクスチャを作成する | Create a texture from an image file
-  const Texture texture{U"example/windmill.png"};
+  int interval = 1;  // 敵を出現させる間隔（秒）
+  double accumlated_time = 0.0;
+  const Font font{FontMethod::MSDF, 48};
 
-  // 絵文字からテクスチャを作成する | Create a texture from an emoji
-  const Texture emoji{U"🦖"_emoji};
+  TextureAsset::Register(U"enemy", U"😁"_emoji);
+  TextureAsset::Register(U"player", U"🤓"_emoji);
 
-  // 太文字のフォントを作成する | Create a bold font with MSDF method
-  const Font font{FontMethod::MSDF, 48, Typeface::Bold};
-
-  // テキストに含まれる絵文字のためのフォントを作成し、font に追加する | Create
-  // a font for emojis in text and add it to font as a fallback
-  const Font emojiFont{48, Typeface::ColorEmoji};
-  font.addFallback(emojiFont);
-
-  // ボタンを押した回数 | Number of button presses
-  int32 count = 0;
-
-  // チェックボックスの状態 | Checkbox state
-  bool checked = false;
-
-  // プレイヤーの移動スピード | Player's movement speed
-  double speed = 200.0;
-
-  // プレイヤーの X 座標 | Player's X position
-  double playerPosX = 400;
-
-  // プレイヤーが右を向いているか | Whether player is facing right
-  bool isPlayerFacingRight = true;
-
-  Player player(20, 30);
-  player.update();
-  player.draw();
-  player.showXY();
+  stopwatch.start();
 
   while (System::Update()) {
-    // テクスチャを描く | Draw the texture
-    texture.draw(20, 20);
-
-    // テキストを描く | Draw text
-    font(U"Hello, Siv3D!🎮").draw(64, Vec2{20, 340}, ColorF{0.2, 0.4, 0.8});
-
-    // 指定した範囲内にテキストを描く | Draw text within a specified area
-    font(
-        U"Siv3D (シブスリーディー) は、ゲームやアプリを楽しく簡単な C++ "
-        U"コードで開発できるフレームワークです。")
-        .draw(18, Rect{20, 430, 480, 200}, Palette::Black);
-
-    // 長方形を描く | Draw a rectangle
-    Rect{540, 20, 80, 80}.draw();
-
-    // 角丸長方形を描く | Draw a rounded rectangle
-    RoundRect{680, 20, 80, 200, 20}.draw(ColorF{0.0, 0.4, 0.6});
-
-    // 円を描く | Draw a circle
-    Circle{580, 180, 40}.draw(Palette::Seagreen);
-
-    // 矢印を描く | Draw an arrow
-    Line{540, 330, 760, 260}.drawArrow(8, SizeF{20, 20}, ColorF{0.4});
-
-    // 半透明の円を描く | Draw a semi-transparent circle
-    Circle{Cursor::Pos(), 40}.draw(ColorF{1.0, 0.0, 0.0, 0.5});
-
-    // ボタン | Button
-    if (SimpleGUI::Button(U"count: {}"_fmt(count), Vec2{520, 370}, 120,
-                          (checked == false))) {
-      // カウントを増やす | Increase the count
-      ++count;
+    player.draw();
+    player.update();
+    // enemys_update
+    for (Enemy& enemy : enemys) {
+      enemy.update();
+      enemy.draw();
+      if (enemy.hit_collision.intersects(player.hit_collision) ||
+          !player.is_in_screen()) {
+        reset_game();
+        break;
+      }
     }
-
-    // チェックボックス | Checkbox
-    SimpleGUI::CheckBox(checked, U"Lock \U000F033E", Vec2{660, 370}, 120);
-
-    // スライダー | Slider
-    SimpleGUI::Slider(U"speed: {:.1f}"_fmt(speed), speed, 100, 400,
-                      Vec2{520, 420}, 140, 120);
-
-    // 左キーが押されていたら | If left key is pressed
-    if (KeyLeft.pressed()) {
-      // プレイヤーが左に移動する | Player moves left
-      playerPosX = Max((playerPosX - speed * Scene::DeltaTime()), 60.0);
-      isPlayerFacingRight = false;
+    // timer
+    accumlated_time += Scene::DeltaTime();
+    if (interval <= accumlated_time) {
+      accumlated_time -= interval;
+      dispatch_enemy();
     }
-
-    // 右キーが押されていたら | If right key is pressed
-    if (KeyRight.pressed()) {
-      // プレイヤーが右に移動する | Player moves right
-      playerPosX = Min((playerPosX + speed * Scene::DeltaTime()), 740.0);
-      isPlayerFacingRight = true;
-    }
-
-    // プレイヤーを描く | Draw the player
-    emoji.scaled(0.75).mirrored(isPlayerFacingRight).drawAt(playerPosX, 540);
+    double seconds = stopwatch.sF();  // タイマー表示（小数第1位まで）
+    font(U"Time: {:.1f}"_fmt(seconds)).draw(20, 20, Palette::Black);
   }
 }

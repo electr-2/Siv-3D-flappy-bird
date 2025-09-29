@@ -1,15 +1,15 @@
 #include <Siv3D.hpp>
 
-class Player {
+class Enemy {
  public:
-  Player();
+  Enemy(double y, bool is_left);
   void setup();
   void update();
   void draw();
   Circle hit_collision;
-  bool is_in_screen();
 
  private:
+  double x;
   double y;
-  double vy;
+  const bool is_left;
 };
